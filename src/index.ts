@@ -20,5 +20,16 @@ export type {
 // Contrato del provider — type-only (lo implementan los plugins provider).
 export type { RegulatoryCatalogProvider } from './contracts/regulatory-catalog-provider.js';
 
-// Componentes y hooks de UI reutilizables: se exportarán en la Fase D
-// (CatalogSearch, CompositionList, SourceBadge, useCatalogSearch).
+// Maestro de laboratorios compartido (COONG-219) — lo consumen vet-pharmacy y
+// vaccination. El selector y el hook son la API pública para los formularios; el
+// row es type-only (el schema/repo viven en '@coongro/vademecum/server').
+export { LaboratorySelect } from './components/LaboratorySelect.js';
+export { LabFormDialog } from './components/LabFormDialog.js';
+export type { LabFormValues } from './components/LabFormDialog.js';
+export { useLaboratories } from './hooks/useLaboratories.js';
+export type { UseLaboratoriesResult, CreateLaboratoryInput } from './hooks/useLaboratories.js';
+export type { LaboratoryRow, NewLaboratoryRow } from './schema/laboratory.js';
+
+// Componentes y hooks de UI reutilizables del catálogo regulatorio: se
+// exportarán en la Fase D (CatalogSearch, CompositionList, SourceBadge,
+// useCatalogSearch).
