@@ -29,6 +29,12 @@ export interface CatalogProductSummary {
   /** Id del provider que lo proveyó (ej. "senasa"). */
   source: string;
   /**
+   * País de la fuente (ISO 3166-1 alpha-2, ej. "AR"). Lo setea el provider para
+   * que, al materializar el laboratorio en el maestro compartido, quede con su
+   * país de origen (gating multi-país). undefined si la fuente no lo expone.
+   */
+  country?: CountryCode;
+  /**
    * Especies destino. El índice no las trae, pero `search` las completa cuando
    * clasifica por tipo (ya tiene el detalle a mano) — así el dropdown puede
    * mostrarlas sin un fetch extra. undefined si la búsqueda no clasificó.
