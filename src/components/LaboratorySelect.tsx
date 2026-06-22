@@ -7,7 +7,7 @@ import type { LabFormValues } from './LabFormDialog.js';
 
 const UI = getHostUI();
 const React = getHostReact();
-const { useState, useCallback } = React;
+const { useState, useCallback, useEffect, useRef } = React;
 const h = React.createElement;
 
 interface LaboratorySelectProps {
@@ -30,9 +30,22 @@ interface LaboratorySelectProps {
  */
 export function LaboratorySelect(props: LaboratorySelectProps) {
   const { value, onValueChange, allowCreate = true, placeholder, disabled } = props;
-  const { laboratories, create } = useLaboratories();
+  const { laboratories, create, refetch, loading } = useLaboratories();
   const [createLabName, setCreateLabName] = useState<string | null>(null);
   const [savingLab, setSavingLab] = useState(false);
+
+  // Si llega un value (id) que no está en la lista, refetchear una vez: pasa
+  // cuando el lab se creó por fuera de este hook (ej. el autofill SENASA hace
+  // ensureByName por RPC directo) y la lista quedó stale → el chip mostraría el
+  // UUID crudo. El ref evita un loop si el id realmente no existe.
+  const refetchedFor = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!value || loading) return;
+    if (laboratories.some((l) => l.id === value)) return;
+    if (refetchedFor.current.has(value)) return;
+    refetchedFor.current.add(value);
+    void refetch();
+  }, [value, laboratories, loading, refetch]);
 
   const activeLabs = laboratories.filter((lab) => lab.is_active);
 
