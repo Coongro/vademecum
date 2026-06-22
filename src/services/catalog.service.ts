@@ -84,9 +84,17 @@ export class CatalogService {
     // Clasificar por tipo: el kind solo vive en el detalle, así que se traen los
     // detalles de los candidatos en paralelo (cacheados) y se filtra. De paso se
     // enriquece cada summary con las especies del detalle (sin fetch extra).
-    const details = await Promise.all(
-      matches.map((p) => this.getDetail({ sourceId: p.sourceId }).catch(() => null))
-    );
+    // Se usa try/catch en un helper tipado en vez de `.catch(() => null)`: la
+    // resolución del overload de `.catch` degrada el resultado a `Promise<any>`
+    // en el typescript-eslint de este entorno y dispara no-unsafe-* aguas abajo.
+    const safeDetail = async (sourceId: string): Promise<CatalogProductDetail | null> => {
+      try {
+        return await this.getDetail({ sourceId });
+      } catch {
+        return null;
+      }
+    };
+    const details = await Promise.all(matches.map((p) => safeDetail(p.sourceId)));
     return matches
       .map((p, i) => ({ summary: p, detail: details[i] }))
       .filter((e) => e.detail?.kind === kind)

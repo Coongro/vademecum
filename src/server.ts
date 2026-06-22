@@ -8,6 +8,13 @@
  * `providerRegistry` y construyen `new CatalogService(provider)`.
  */
 
+// Maestro de laboratorios compartido (COONG-219): el repo lo auto-cablea el
+// manifest (prefix `vademecum.laboratories`); se reexporta acá para consumo
+// server-side directo y para el schema/migraciones.
+export { LaboratoryRepository } from './repositories/laboratory.repository.js';
+export { laboratoryTable } from './schema/laboratory.js';
+export type { LaboratoryRow, NewLaboratoryRow } from './schema/laboratory.js';
+
 export { providerRegistry } from './registry/provider-registry.js';
 export type { ProviderRegistry } from './registry/provider-registry.js';
 export { CatalogService } from './services/catalog.service.js';

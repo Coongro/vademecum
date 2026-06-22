@@ -10,8 +10,37 @@
     ]
   },
   "contributes": {
-    "menus": [],
-    "views": [],
-    "repositories": []
+    "menuSections": [
+      {
+        "id": "catalogos",
+        "label": "Catálogos",
+        "order": 50
+      }
+    ],
+    "menus": [
+      {
+        "path": "Laboratorios",
+        "order": 10,
+        "section": "catalogos",
+        "icon": "FlaskConical",
+        "color": "#7C3AED",
+        "viewId": "vademecum.laboratorios.open"
+      }
+    ],
+    "views": [
+      {
+        "id": "vademecum.laboratorios.open",
+        "title": "Laboratorios",
+        "component": "./dist/views/laboratorios/index.js",
+        "export": "LaboratoriosView"
+      }
+    ],
+    "repositories": [
+      {
+        "module": "./dist/repositories/laboratory.repository.js",
+        "export": "LaboratoryRepository",
+        "prefix": "vademecum.laboratories"
+      }
+    ]
   }
 }
