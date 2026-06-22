@@ -35,12 +35,9 @@ export function LaboratoriosView() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<LaboratoryRow | null>(null);
   const [saving, setSaving] = useState(false);
-  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [searchInput, setSearchInput] = useState('');
   const [estadoFilter, setEstadoFilter] = useState<EstadoFilter>('todos');
-
-  const labToDelete = laboratories.find((l) => l.id === confirmingId) ?? null;
 
   const openCreate = useCallback(() => {
     setEditing(null);
@@ -70,25 +67,19 @@ export function LaboratoriosView() {
     [editing, create, update]
   );
 
-  const handleToggleActive = useCallback(
-    async (lab: LaboratoryRow) => {
-      await update(lab.id, { is_active: !lab.is_active });
-    },
-    [update]
-  );
-
-  const handleRemove = useCallback(
-    async (id: string) => {
-      setDeleting(true);
-      try {
-        await remove(id);
-        setConfirmingId(null);
-      } finally {
-        setDeleting(false);
-      }
-    },
-    [remove]
-  );
+  // El borrado se dispara desde el diálogo de edición (botón "Eliminar" + confirm
+  // anidado), igual que Medicamentos — no hay acción inline en la fila.
+  const handleDelete = useCallback(async () => {
+    if (!editing) return;
+    setDeleting(true);
+    try {
+      await remove(editing.id);
+      setFormOpen(false);
+      setEditing(null);
+    } finally {
+      setDeleting(false);
+    }
+  }, [editing, remove]);
 
   const existingNames = laboratories.filter((l) => l.id !== editing?.id).map((l) => l.name);
 
@@ -158,59 +149,8 @@ export function LaboratoriosView() {
             lab.is_active ? 'Activo' : 'Inactivo'
           ),
       },
-      {
-        key: 'acciones',
-        header: '',
-        render: (lab: LaboratoryRow) =>
-          h(
-            'div',
-            { style: { display: 'flex', gap: '2px', justifyContent: 'flex-end' } },
-            h(
-              UI.IconButton,
-              {
-                variant: 'ghost',
-                size: 'sm',
-                'aria-label': `Editar laboratorio ${lab.name}`,
-                onClick: (e: any) => {
-                  e?.stopPropagation?.();
-                  openEdit(lab);
-                },
-              } as any,
-              h(UI.DynamicIcon, { icon: 'Pencil', size: 14 } as any)
-            ),
-            h(
-              UI.IconButton,
-              {
-                variant: 'ghost',
-                size: 'sm',
-                'aria-label': `${lab.is_active ? 'Desactivar' : 'Activar'} laboratorio ${lab.name}`,
-                onClick: (e: any) => {
-                  e?.stopPropagation?.();
-                  void handleToggleActive(lab);
-                },
-              } as any,
-              h(UI.DynamicIcon, {
-                icon: lab.is_active ? 'Archive' : 'ArchiveRestore',
-                size: 14,
-              } as any)
-            ),
-            h(
-              UI.IconButton,
-              {
-                variant: 'ghost',
-                size: 'sm',
-                'aria-label': `Eliminar laboratorio ${lab.name}`,
-                onClick: (e: any) => {
-                  e?.stopPropagation?.();
-                  setConfirmingId(lab.id);
-                },
-              } as any,
-              h(UI.DynamicIcon, { icon: 'Trash2', size: 14, color: 'var(--cg-danger)' } as any)
-            )
-          ),
-      },
     ],
-    [openEdit, handleToggleActive]
+    []
   );
 
   return h(
@@ -301,7 +241,7 @@ export function LaboratoriosView() {
           } as any)
     ),
 
-    // Alta / edición
+    // Alta / edición (el borrado vive acá adentro, como en Medicamentos)
     h(LabFormDialog, {
       open: formOpen,
       onClose: () => {
@@ -312,26 +252,8 @@ export function LaboratoriosView() {
       laboratory: editing,
       existingNames,
       saving,
-    }),
-
-    // Confirmación de borrado
-    h(UI.ConfirmDialog, {
-      open: confirmingId !== null,
-      onOpenChange: (val: boolean) => !val && setConfirmingId(null),
-      title: 'Eliminar laboratorio',
-      description: labToDelete
-        ? h(
-            React.Fragment,
-            null,
-            '¿Seguro que querés eliminar el laboratorio ',
-            h('strong', null, labToDelete.name),
-            '? Esta acción no se puede deshacer.'
-          )
-        : '',
-      confirmLabel: 'Eliminar',
-      loadingLabel: 'Eliminando...',
-      loading: deleting,
-      onConfirm: () => confirmingId && void handleRemove(confirmingId),
-    } as any)
+      onDelete: editing ? handleDelete : undefined,
+      deleting,
+    })
   );
 }
