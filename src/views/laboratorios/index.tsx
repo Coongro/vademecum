@@ -7,8 +7,10 @@ import type { LaboratoryRow } from '../../schema/laboratory.js';
 
 const UI = getHostUI();
 const React = getHostReact();
-const { useState, useCallback } = React;
+const { useState, useCallback, useMemo } = React;
 const h = React.createElement;
+
+type EstadoFilter = 'activos' | 'inactivos' | 'todos';
 
 /** Etiqueta legible del origen del registro para el badge. */
 function sourceLabel(source: string): string {
@@ -16,14 +18,16 @@ function sourceLabel(source: string): string {
   return source.toUpperCase();
 }
 
+const MUTED: Record<string, string> = { color: 'var(--cg-text-muted)' };
+
 /**
  * Vista de gestión del maestro de laboratorios compartido (COONG-219).
  *
  * Vive en vademecum —el plugin neutral— porque el maestro lo comparten Farmacia
- * y Vacunación; ponerla en cualquiera de los dos lo silaría. Es master-data de
- * baja frecuencia: alta/edición/baja del catálogo que después consume el
- * selector compartido. Inline styles + vars cg-* a propósito, para no chocar con
- * la cascada Tailwind de otros plugins.
+ * y Vacunación; ponerla en cualquiera de los dos lo silaría. Usa el `UI.DataTable`
+ * del host (mismo look que Medicamentos: header de columnas, buscador, filtros);
+ * el contenido de las celdas va con inline styles + vars cg-* para no depender de
+ * la build de Tailwind del plugin.
  */
 export function LaboratoriosView() {
   const { laboratories, loading, error, create, update, remove } = useLaboratories();
@@ -33,6 +37,8 @@ export function LaboratoriosView() {
   const [saving, setSaving] = useState(false);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
+  const [estadoFilter, setEstadoFilter] = useState<EstadoFilter>('todos');
 
   const labToDelete = laboratories.find((l) => l.id === confirmingId) ?? null;
 
@@ -86,62 +92,162 @@ export function LaboratoriosView() {
 
   const existingNames = laboratories.filter((l) => l.id !== editing?.id).map((l) => l.name);
 
+  // Filtrado client-side (el DataTable no filtra: solo expone search/filtros).
+  const filtered = useMemo(() => {
+    let result = laboratories;
+    if (estadoFilter === 'activos') result = result.filter((l) => l.is_active);
+    else if (estadoFilter === 'inactivos') result = result.filter((l) => !l.is_active);
+    const q = searchInput.trim().toLowerCase();
+    if (q) {
+      result = result.filter(
+        (l) =>
+          l.name.toLowerCase().includes(q) ||
+          (l.tax_id ?? '').toLowerCase().includes(q) ||
+          (l.registration_number ?? '').toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [laboratories, estadoFilter, searchInput]);
+
+  const columns = useMemo(
+    () => [
+      {
+        key: 'name',
+        header: 'Laboratorio',
+        render: (lab: LaboratoryRow) =>
+          h(
+            'span',
+            {
+              style: {
+                fontWeight: 600,
+                color: lab.is_active ? 'var(--cg-text)' : 'var(--cg-text-muted)',
+              },
+            },
+            lab.name
+          ),
+      },
+      {
+        key: 'cuit',
+        header: 'CUIT',
+        render: (lab: LaboratoryRow) =>
+          h('span', { style: lab.tax_id ? undefined : MUTED }, lab.tax_id || '—'),
+      },
+      {
+        key: 'registro',
+        header: 'Inscripción',
+        render: (lab: LaboratoryRow) =>
+          h(
+            'span',
+            { style: lab.registration_number ? undefined : MUTED },
+            lab.registration_number || '—'
+          ),
+      },
+      {
+        key: 'origen',
+        header: 'Origen',
+        render: (lab: LaboratoryRow) =>
+          h(UI.Badge, { variant: 'secondary' } as any, sourceLabel(lab.source)),
+      },
+      {
+        key: 'estado',
+        header: 'Estado',
+        render: (lab: LaboratoryRow) =>
+          h(
+            UI.Badge,
+            { variant: lab.is_active ? 'success' : 'secondary' } as any,
+            lab.is_active ? 'Activo' : 'Inactivo'
+          ),
+      },
+      {
+        key: 'acciones',
+        header: '',
+        render: (lab: LaboratoryRow) =>
+          h(
+            'div',
+            { style: { display: 'flex', gap: '2px', justifyContent: 'flex-end' } },
+            h(
+              UI.IconButton,
+              {
+                variant: 'ghost',
+                size: 'sm',
+                'aria-label': `Editar laboratorio ${lab.name}`,
+                onClick: (e: any) => {
+                  e?.stopPropagation?.();
+                  openEdit(lab);
+                },
+              } as any,
+              h(UI.DynamicIcon, { icon: 'Pencil', size: 14 } as any)
+            ),
+            h(
+              UI.IconButton,
+              {
+                variant: 'ghost',
+                size: 'sm',
+                'aria-label': `${lab.is_active ? 'Desactivar' : 'Activar'} laboratorio ${lab.name}`,
+                onClick: (e: any) => {
+                  e?.stopPropagation?.();
+                  void handleToggleActive(lab);
+                },
+              } as any,
+              h(UI.DynamicIcon, {
+                icon: lab.is_active ? 'Archive' : 'ArchiveRestore',
+                size: 14,
+              } as any)
+            ),
+            h(
+              UI.IconButton,
+              {
+                variant: 'ghost',
+                size: 'sm',
+                'aria-label': `Eliminar laboratorio ${lab.name}`,
+                onClick: (e: any) => {
+                  e?.stopPropagation?.();
+                  setConfirmingId(lab.id);
+                },
+              } as any,
+              h(UI.DynamicIcon, { icon: 'Trash2', size: 14, color: 'var(--cg-danger)' } as any)
+            )
+          ),
+      },
+    ],
+    [openEdit, handleToggleActive]
+  );
+
   return h(
     'div',
     {
       style: {
-        minHeight: '100vh',
-        background: 'var(--cg-bg-secondary)',
+        minHeight: '100%',
         padding: '24px',
+        background: 'var(--cg-bg)',
+        color: 'var(--cg-text)',
       },
     },
-    // Header
+
+    // Header (título + acción), al estilo de Medicamentos
     h(
       'div',
       {
         style: {
           display: 'flex',
-          alignItems: 'flex-start',
+          alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '12px',
-          marginBottom: '20px',
+          gap: '16px',
+          marginBottom: '16px',
         },
       },
       h(
         'div',
         null,
         h(
-          'div',
-          {
-            style: {
-              fontSize: '11px',
-              fontWeight: 700,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              color: 'var(--cg-text-muted)',
-              marginBottom: '4px',
-            },
-          },
-          'CATÁLOGO COMPARTIDO'
-        ),
-        h(
           'h1',
-          { style: { fontSize: '22px', fontWeight: 800, color: 'var(--cg-text)', margin: 0 } },
+          { style: { fontSize: '20px', fontWeight: 600, color: 'var(--cg-text)', margin: 0 } },
           'Laboratorios'
         ),
         h(
           'p',
-          {
-            style: {
-              fontSize: '13px',
-              color: 'var(--cg-text-muted)',
-              margin: '6px 0 0',
-              maxWidth: '560px',
-              lineHeight: 1.5,
-            },
-          },
-          'Maestro único de laboratorios. Lo usan tanto Farmacia (medicamentos) como Vacunación; ',
-          'editarlo acá impacta en ambos.'
+          { style: { fontSize: '13px', color: 'var(--cg-text-muted)', margin: '4px 0 0' } },
+          'Maestro compartido: lo usan Farmacia (medicamentos) y Vacunación.'
         )
       ),
       h(
@@ -152,7 +258,7 @@ export function LaboratoriosView() {
       )
     ),
 
-    // Card con la lista
+    // Tabla — UI.DataTable (mismo patrón que Medicamentos)
     h(
       'div',
       {
@@ -160,135 +266,39 @@ export function LaboratoriosView() {
           background: 'var(--cg-bg)',
           border: '1px solid var(--cg-border)',
           borderRadius: '12px',
+          padding: '24px',
           boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-          overflow: 'hidden',
         },
       },
       error
-        ? h(
-            'div',
-            { style: { padding: '24px', color: 'var(--cg-danger)', fontSize: '14px' } },
-            error
-          )
-        : loading
-          ? h(
-              'div',
-              { style: { padding: '24px', color: 'var(--cg-text-muted)', fontSize: '14px' } },
-              'Cargando laboratorios…'
-            )
-          : laboratories.length === 0
-            ? h(UI.EmptyState, {
-                title: 'Sin laboratorios',
-                description: 'Agregá el primer laboratorio para empezar.',
-              } as any)
-            : laboratories.map((lab, i) =>
-                h(
-                  'div',
-                  {
-                    key: lab.id,
-                    style: {
-                      padding: '14px 20px',
-                      borderBottom:
-                        i < laboratories.length - 1 ? '1px solid var(--cg-border)' : 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                    },
-                  },
-                  h(
-                    'div',
-                    { style: { flex: 1, minWidth: 0 } },
-                    h(
-                      'div',
-                      {
-                        style: {
-                          fontWeight: 700,
-                          fontSize: '14px',
-                          color: lab.is_active ? 'var(--cg-text)' : 'var(--cg-text-muted)',
-                        },
-                      },
-                      lab.name
-                    ),
-                    h(
-                      'div',
-                      {
-                        style: {
-                          fontSize: '12px',
-                          color: 'var(--cg-text-muted)',
-                          marginTop: '2px',
-                          display: 'flex',
-                          gap: '12px',
-                          flexWrap: 'wrap',
-                        },
-                      },
-                      lab.tax_id && h('span', null, `CUIT ${lab.tax_id}`),
-                      lab.registration_number &&
-                        h('span', null, `Inscripción ${lab.registration_number}`),
-                      !lab.tax_id &&
-                        !lab.registration_number &&
-                        h('span', null, 'Sin datos de firma')
-                    )
-                  ),
-                  h(UI.Badge, { variant: 'secondary' } as any, sourceLabel(lab.source)),
-                  h(
-                    UI.Badge,
-                    { variant: lab.is_active ? 'success' : 'secondary' } as any,
-                    lab.is_active ? 'Activo' : 'Inactivo'
-                  ),
-                  h(
-                    UI.IconButton,
-                    {
-                      variant: 'ghost',
-                      size: 'sm',
-                      'aria-label': `Editar laboratorio ${lab.name}`,
-                      onClick: () => openEdit(lab),
-                    } as any,
-                    h(UI.DynamicIcon, { icon: 'Pencil', size: 14 } as any)
-                  ),
-                  h(
-                    UI.IconButton,
-                    {
-                      variant: 'ghost',
-                      size: 'sm',
-                      'aria-label': `${lab.is_active ? 'Desactivar' : 'Activar'} laboratorio ${lab.name}`,
-                      onClick: () => handleToggleActive(lab),
-                    } as any,
-                    h(UI.DynamicIcon, {
-                      icon: lab.is_active ? 'Archive' : 'ArchiveRestore',
-                      size: 14,
-                    } as any)
-                  ),
-                  h(
-                    UI.IconButton,
-                    {
-                      variant: 'ghost',
-                      size: 'sm',
-                      'aria-label': `Eliminar laboratorio ${lab.name}`,
-                      onClick: () => setConfirmingId(lab.id),
-                    } as any,
-                    h(UI.DynamicIcon, {
-                      icon: 'Trash2',
-                      size: 14,
-                      color: 'var(--cg-danger)',
-                    } as any)
-                  )
-                )
-              )
-    ),
-
-    // Nota al pie
-    h(
-      'p',
-      {
-        style: {
-          fontSize: '11.5px',
-          color: 'var(--cg-text-muted)',
-          margin: '12px 2px 0',
-          lineHeight: 1.5,
-        },
-      },
-      'Desactivar un laboratorio lo oculta del selector sin borrarlo. Eliminar lo quita del maestro; ',
-      'los productos que ya lo referencien conservan el dato hasta reasignarlos.'
+        ? h('div', { style: { color: 'var(--cg-danger)', fontSize: '14px' } }, error)
+        : h(UI.DataTable, {
+            data: filtered,
+            columns,
+            rowKey: (lab: LaboratoryRow) => lab.id,
+            loading,
+            onRowClick: (lab: LaboratoryRow) => openEdit(lab),
+            searchValue: searchInput,
+            onSearchChange: setSearchInput,
+            searchPlaceholder: 'Buscar por nombre, CUIT o inscripción',
+            filterSections: [
+              {
+                label: 'Estado',
+                options: [
+                  { value: 'todos', label: 'Todos' },
+                  { value: 'activos', label: 'Activos' },
+                  { value: 'inactivos', label: 'Inactivos' },
+                ],
+                value: estadoFilter,
+                onChange: (v: string) => setEstadoFilter(v as EstadoFilter),
+              },
+            ],
+            emptyState: {
+              title: 'Sin laboratorios',
+              description: 'Agregá el primer laboratorio para empezar.',
+            },
+            skeletonRows: 8,
+          } as any)
     ),
 
     // Alta / edición
