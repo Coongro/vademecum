@@ -1,6 +1,7 @@
 import { getHostReact, actions } from '@coongro/plugin-sdk';
 
 import type { LaboratoryRow } from '../schema/laboratory.js';
+import { uuid } from '../utils/uuid.js';
 
 const { useState, useEffect, useCallback, useRef } = getHostReact();
 
@@ -69,7 +70,7 @@ export function useLaboratories(): UseLaboratoriesResult {
   const create = useCallback(
     async (data: CreateLaboratoryInput): Promise<LaboratoryRow> => {
       const result = await actions.execute<LaboratoryRow[]>('vademecum.laboratories.create', {
-        data: { id: crypto.randomUUID(), ...data },
+        data: { id: uuid(), ...data },
       });
       await refetch();
       return result[0];
