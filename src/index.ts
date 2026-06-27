@@ -30,6 +30,11 @@ export { useLaboratories } from './hooks/useLaboratories.js';
 export type { UseLaboratoriesResult, CreateLaboratoryInput } from './hooks/useLaboratories.js';
 export type { LaboratoryRow, NewLaboratoryRow } from './schema/laboratory.js';
 
-// Componentes y hooks de UI reutilizables del catálogo regulatorio: se
-// exportarán en la Fase D (CatalogSearch, CompositionList, SourceBadge,
-// useCatalogSearch).
+// Buscador + autofill del catálogo regulatorio, reutilizable (COONG-224).
+// Lo consumen vet-pharmacy (medicamentos) y vaccination (vacunas): mismo
+// buscador, distinto `kind`. El componente emite la ficha completa por `onSelect`
+// y cada consumidor mapea el autofill a su form.
+export { CatalogSearch } from './components/CatalogSearch.js';
+export type { CatalogSearchProps } from './components/CatalogSearch.js';
+export { useCatalogSearch } from './hooks/useCatalogSearch.js';
+export type { UseCatalogSearchOptions, UseCatalogSearchResult } from './hooks/useCatalogSearch.js';
