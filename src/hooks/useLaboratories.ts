@@ -1,7 +1,6 @@
-import { getHostReact, actions } from '@coongro/plugin-sdk';
+import { getHostReact, actions, uuid } from '@coongro/plugin-sdk';
 
 import type { LaboratoryRow } from '../schema/laboratory.js';
-import { uuid } from '../utils/uuid.js';
 
 const { useState, useEffect, useCallback, useRef } = getHostReact();
 

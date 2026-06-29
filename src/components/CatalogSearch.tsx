@@ -1,4 +1,4 @@
-import { getHostReact, getHostUI } from '@coongro/plugin-sdk';
+import { getHostReact, getHostUI, toast } from '@coongro/plugin-sdk';
 
 import { useCatalogSearch } from '../hooks/useCatalogSearch.js';
 import type {
@@ -11,18 +11,6 @@ const UI = getHostUI();
 const React = getHostReact();
 const { useState, useEffect, useRef } = React;
 const h = React.createElement;
-
-/**
- * Notifica vía el toast del host (`window.coongro.toast.show`), el primitivo de
- * la plataforma. Se usa este en vez del `usePlugin().toast` del SDK a propósito:
- * el componente es cross-plugin y `usePlugin` requiere su provider de contexto,
- * que no siempre está montado en la vista que consume el buscador (Vacunación lo
- * evita por eso). El primitivo global está siempre disponible.
- */
-function hostToast(title: string, message: string, type: 'info' | 'error'): void {
-  const host = (globalThis as { coongro?: { toast?: { show?: (o: unknown) => void } } }).coongro;
-  host?.toast?.show?.({ title, message, type });
-}
 
 export interface CatalogSearchProps {
   /**
@@ -173,22 +161,14 @@ export function CatalogSearch(props: CatalogSearchProps) {
       if (!detail) {
         // Un producto que estaba en el dropdown y de golpe no tiene ficha NO es
         // normal (race / inconsistencia del backend): es error, no un "aviso".
-        hostToast(
-          'No se pudo traer la ficha',
-          'Reintentá o cargá el producto manualmente.',
-          'error'
-        );
+        toast.error('No se pudo traer la ficha', 'Reintentá o cargá el producto manualmente.');
         return;
       }
       onSelect(detail);
       reset();
     } catch (err) {
       if (mountedRef.current)
-        hostToast(
-          'Error',
-          err instanceof Error ? err.message : 'No se pudo traer el detalle',
-          'error'
-        );
+        toast.error('Error', err instanceof Error ? err.message : 'No se pudo traer el detalle');
     } finally {
       if (mountedRef.current) setPicking(false);
     }
