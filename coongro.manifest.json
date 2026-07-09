@@ -10,18 +10,10 @@
     ]
   },
   "contributes": {
-    "menuSections": [
-      {
-        "id": "catalogos",
-        "label": "Catálogos",
-        "order": 50
-      }
-    ],
     "menus": [
       {
         "path": "Laboratorios",
         "order": 10,
-        "section": "catalogos",
         "icon": "FlaskConical",
         "color": "#7C3AED",
         "viewId": "vademecum.laboratorios.open"
