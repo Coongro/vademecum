@@ -1,0 +1,54 @@
+{
+  "$comment": "Componentes que vademecum aporta al Builder de Vistas (view-builder). Mismo formato que components.core.json — el motor los detecta solo: aparecen en el slash-menu con badge de origen, en el MCP (list_components / get_component_config) y ganan popover generado.",
+  "version": 1,
+  "components": [
+    {
+      "comp": "CatalogSearch",
+      "label": "Buscador de vademécum",
+      "hint": "Busca en el catálogo SENASA y autocompleta",
+      "icon": "search",
+      "configs": [
+        {
+          "name": "kind",
+          "type": "enum",
+          "label": "Catálogo",
+          "description": "Filtra el tipo de producto: medication (farmacia) o vaccine (vacunación). Sin valor busca todo.",
+          "options": ["medication", "vaccine"],
+          "default": "medication"
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "label": "Título",
+          "default": "Buscar en el vademécum de SENASA"
+        },
+        {
+          "name": "subtitle",
+          "type": "string",
+          "label": "Subtítulo",
+          "advanced": true
+        },
+        {
+          "name": "placeholder",
+          "type": "string",
+          "label": "Placeholder del input",
+          "advanced": true
+        },
+        {
+          "name": "onSelect",
+          "type": "action",
+          "label": "Al seleccionar un producto",
+          "description": "El consumidor mapea la ficha completa a su formulario (el autofill vive en el consumidor)",
+          "args": [{ "name": "detail", "type": "object", "description": "CatalogProductDetail resuelto" }]
+        },
+        {
+          "name": "onClear",
+          "type": "action",
+          "label": "Al pulsar «Cambiar»",
+          "advanced": true
+        }
+      ],
+      "importFrom": { "module": "@coongro/vademecum", "export": "CatalogSearch" }
+    }
+  ]
+}
