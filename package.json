@@ -1,6 +1,6 @@
 {
   "name": "@coongro/vademecum",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "type": "module",
   "description": "Catálogo regulatorio reutilizable (librería): contrato de providers, registry, sync + caché del padrón, y UI de búsqueda/autofill. Agnóstico de fuente; los providers (SENASA, etc.) se enchufan.",
   "main": "dist/index.js",
