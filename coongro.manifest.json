@@ -31,7 +31,16 @@
       {
         "module": "./dist/repositories/laboratory.repository.js",
         "export": "LaboratoryRepository",
-        "prefix": "vademecum.laboratories"
+        "prefix": "vademecum.laboratories",
+        "actions": [
+          "list",
+          "listActive",
+          "getById",
+          "create",
+          "update",
+          "softDelete",
+          "ensureByName"
+        ]
       }
     ]
   }
